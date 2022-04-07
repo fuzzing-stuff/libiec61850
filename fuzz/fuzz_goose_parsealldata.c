@@ -4,14 +4,12 @@
 #include "iec61850_server.h"
 #include "hal_thread.h"
 
+#include "goose_receiver.c"
+
 int LLVMFuzzerTestOneInput(const char *data, size_t size) {
     int out;
-    MmsValue* value = NULL;
-    value = MmsValue_decodeMmsData((uint8_t*)data, 0, size, &out);
-
-    if (value != NULL) {
-        MmsValue_delete(value);
-    }
+    MmsValue *dataSetValues[10];
+    GooseParseError error = parseAllData((uint8_t*) data, size, (MmsValue*) dataSetValues);
 
     return 0;
 }

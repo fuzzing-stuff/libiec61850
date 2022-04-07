@@ -4,7 +4,7 @@ include make/target_system.mk
 
 LIB_SOURCE_DIRS = src/mms/iso_acse
 LIB_SOURCE_DIRS += src/mms/iso_acse/asn1c
-LIB_SOURCE_DIRS += src/mms/iso_presentation/asn1c 
+LIB_SOURCE_DIRS += src/mms/iso_presentation/asn1c
 LIB_SOURCE_DIRS += src/mms/iso_presentation
 LIB_SOURCE_DIRS += src/mms/iso_session
 LIB_SOURCE_DIRS += src/common
@@ -92,7 +92,7 @@ ifndef INSTALL_PREFIX
 INSTALL_PREFIX = ./.install
 endif
 
-LIB_API_HEADER_FILES = hal/inc/hal_time.h 
+LIB_API_HEADER_FILES = hal/inc/hal_time.h
 LIB_API_HEADER_FILES += hal/inc/hal_thread.h
 LIB_API_HEADER_FILES += hal/inc/hal_filesystem.h
 LIB_API_HEADER_FILES += hal/inc/tls_config.h
@@ -121,6 +121,14 @@ LIB_API_HEADER_FILES += src/sampled_values/sv_subscriber.h
 LIB_API_HEADER_FILES += src/sampled_values/sv_publisher.h
 LIB_API_HEADER_FILES += src/logging/logging_api.h
 
+ifdef SANITIZER
+ifdef FUZZGOOSE
+FUZZ_SOURCES = fuzz/fuzz_goose_parsealldata.c
+else
+FUZZ_SOURCES = fuzz/fuzz_mms_decode.c
+endif
+CFLAGS += -fsanitize=$(SANITIZER)
+endif
 get_sources_from_directory  = $(wildcard $1/*.c)
 get_sources = $(foreach dir, $1, $(call get_sources_from_directory,$(dir)))
 src_to = $(addprefix $(LIB_OBJS_DIR)/,$(subst .c,$1,$2))
@@ -130,23 +138,23 @@ LIB_SOURCES = $(call get_sources,$(LIB_SOURCE_DIRS))
 LIB_OBJS = $(call src_to,.o,$(LIB_SOURCES))
 
 CFLAGS += -std=gnu99
-CFLAGS += -Wno-error=format 
+CFLAGS += -Wno-error=format
 CFLAGS += -Wstrict-prototypes
 
 ifneq ($(HAL_IMPL), WIN32)
-CFLAGS += -Wuninitialized 
+CFLAGS += -Wuninitialized
 endif
 
-CFLAGS += -Wsign-compare 
-CFLAGS += -Wpointer-arith 
-CFLAGS += -Wnested-externs 
-CFLAGS += -Wmissing-declarations 
+CFLAGS += -Wsign-compare
+CFLAGS += -Wpointer-arith
+CFLAGS += -Wnested-externs
+CFLAGS += -Wmissing-declarations
 CFLAGS += -Wshadow
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Wno-format
 #CFLAGS += -Wconditional-uninitialized
-#CFLAGS += -Werror  
+#CFLAGS += -Werror
 
 all:	lib
 
@@ -170,7 +178,7 @@ examples:
 $(LIB_NAME):	$(LIB_OBJS)
 	$(AR) r $(LIB_NAME) $(LIB_OBJS)
 	$(RANLIB) $(LIB_NAME)
-	
+
 $(DYN_LIB_NAME):	$(LIB_OBJS)
 	$(CC) $(LDFLAGS) $(DYNLIB_LDFLAGS) -shared -o $(DYN_LIB_NAME) $(LIB_OBJS) $(LDLIBS)
 
@@ -178,7 +186,9 @@ $(LIB_OBJS_DIR)/%.o: %.c config
 	@echo compiling $(notdir $<)
 	$(SILENCE)mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $(LIB_INCLUDES) $(OUTPUT_OPTION) $<
-	
+
+fuzz: $(LIB_NAME)
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(LDLIBS) $(LIB_OBJS) $(FUZZ_SOURCES)
 install:	$(LIB_NAME)
 	mkdir -p $(INSTALL_PREFIX)/include
 	mkdir -p $(INSTALL_PREFIX)/lib
